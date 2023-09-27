@@ -41,3 +41,6 @@ swirl()
 ![](https://github.com/Smipos/R_practice/blob/main/Practice_1/1_4_img/r_4_2.jpg)
 ![](https://github.com/Smipos/R_practice/blob/main/Practice_1/1_4_img/r_4_3.jpg)
 ![](https://github.com/Smipos/R_practice/blob/main/Practice_1/1_4_img/r_4_4.jpg)
+
+# Вывод
+Изучил основы языка R.
