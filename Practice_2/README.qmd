@@ -44,7 +44,7 @@ starwars |> glimpse()
 
 #### 4. Сколько уникальных рас персонажей (species) представлено в данных?
 ```{r}
-count_unique_species <- length(unique(starwars$height))
+count_unique_species <- length(unique(starwars$species))
 count_unique_species
 ```
 
@@ -66,7 +66,7 @@ under_170
 #### 7. Подсчитать ИМТ (индекс массы тела) для всех персонажей. ИМТ подсчитать по формуле 𝐼 = 𝑚/h^2, где 𝑚 – масса (weight), а ℎ – рост (height).
 ```{r}
 starwars_with_bmi <- starwars |>
-                     mutate(BMI = mass / height^2)
+                     mutate(BMI = mass / (height/100)^2)
 starwars_with_bmi$BMI
 ```
 
