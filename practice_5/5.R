@@ -1,0 +1,91 @@
+library(dplyr)
+library(lubridate)
+
+## Подготовка данных
+
+#### 1. Импортируйте данные.
+anons <- read.csv("mir.csv-01.csv",
+              nrows = 167)
+head(anons)
+reqs <- read.csv("mir.csv-01.csv",
+                 skip = 170)
+head(reqs)
+#### 2. Привести датасеты в вид “аккуратных данных”, преобразовать типы столбцов в соответствии с типом данных
+anons <- anons |> 
+  mutate_at(vars(BSSID, Privacy, Cipher, Authentication, LAN.IP, ESSID), trimws) |>
+  mutate_at(vars(BSSID, Privacy, Cipher, Authentication, LAN.IP, ESSID), na_if, "") |>
+  mutate_at(vars(First.time.seen, Last.time.seen), as.POSIXct, format = "%Y-%m-%d %H:%M:%S")
+
+reqs <- reqs |>
+  mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), trimws) |>
+  mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), na_if, "") |>
+  mutate_at(vars(First.time.seen, Last.time.seen), as.POSIXct, format = "%Y-%m-%d %H:%M:%S") |>
+  mutate_at(vars(Power, X..packets), as.integer) |>
+  filter(!is.na(BSSID))
+
+#### 3. Просмотрите общую структуру данных с помощью функции glimpse()
+glimpse(anons)
+glimpse(reqs)
+
+## Анализ
+
+### Точки доступа
+
+#### 1. Определить небезопасные точки доступа (без шифрования – OPN)
+unsafe_dt <- anons |>
+  filter(Privacy == "OPN") |>
+  select(BSSID, ESSID) |>
+  arrange(BSSID) |>
+  distinct()
+unsafe_dt
+#### 2. Определить производителя для каждого обнаруженного устройства
+
+#### 3. Выявить устройства, использующие последнюю версию протокола шифрования WPA3, и названия точек доступа, реализованных на этих устройствах
+devices_wpa3 <- anons |>
+  filter(Privacy == "WPA3 WPA2") |>
+  select(BSSID, ESSID, Privacy)
+devices_wpa3  
+#### 4. Отсортировать точки доступа по интервалу времени, в течение которого они находились на связи, по убыванию.
+anons_intervals <- anons |>
+  mutate(Interval = seconds_to_period(Last.time.seen - First.time.seen)) |>
+  select(ESSID, First.time.seen, Last.time.seen, Interval) |>
+  arrange(desc(Interval)) |>
+  head()  
+anons_intervals
+#### 5. Обнаружить топ-10 самых быстрых точек доступа
+top_10_spots <- anons |>
+  arrange(desc(Speed)) |>
+  select(BSSID, ESSID, Speed, Privacy) |>
+  head(10)
+top_10_spots
+#### 6. Отсортировать точки доступа по частоте отправки запросов (beacons) в единицу времени по их убыванию.
+anons_beacons <- anons_intervals |> 
+  select(ESSID, First.time.seen, Last.time.seen, X..beacons) |>
+  arrange(desc(X..beacons)) |>
+  head()
+anons_beacons
+
+## Данные клиентов
+
+#### 1. Определить производителя для каждого обнаруженного устройства
+proizv <- reqs |> 
+  filter(grepl("(..:..:..:)(..:..:..)", BSSID)) |>
+  distinct(BSSID)
+proizv
+#### 2. Обнаружить устройства, которые НЕ рандомизируют свой MAC адрес
+devices_n_r <- reqs |>
+  filter(grepl("(..:..:..:)(..:..:..)", BSSID) & !is.na(Probed.ESSIDs)) |>
+  group_by(BSSID, Probed.ESSIDs) |>
+  filter(n() > 1) |>
+  arrange(BSSID) |>
+  unique()
+devices_n_r
+#### 3. Кластеризовать запросы от устройств к точкам доступа по их именам. Определить время появления устройства в зоне радиовидимости и время выхода его из нее.
+cluster_req <- reqs |>
+  filter(!is.na(Probed.ESSIDs)) |>
+  group_by(Station.MAC, Probed.ESSIDs) |>
+  arrange(First.time.seen) |>
+  summarise(Cluster_Start_Time = min(First.time.seen),
+            Cluster_End_Time = max(Last.time.seen),
+            Total_Power = sum(Power))
+cluster_req
