@@ -4,6 +4,7 @@ author: "Mironov Sergei"
 format: 
     md:
         output-file: README.md
+editor: visual
 ---
 
 # Исследование вредоносной активности в домене Windows
